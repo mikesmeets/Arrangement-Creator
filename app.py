@@ -17,7 +17,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'heic'}
 
-from models import db, Vendor, Invoice, InvoiceItem, Arrangement, ArrangementItem, ShopifyCollection, GenericItem, FLOWER_CATEGORIES, ITEM_CATEGORIES
+from models import db, Vendor, Invoice, InvoiceItem, Arrangement, ArrangementItem, ShopifyCollection, GenericItem, FLOWER_CATEGORIES, ITEM_CATEGORIES, FLOWER_VARIETIES, FLOWER_COLORS
 
 db.init_app(app)
 
@@ -35,6 +35,16 @@ with app.app_context():
         if col not in existing:
             db.session.execute(text(f'ALTER TABLE {table} ADD COLUMN {col} {col_def}'))
     db.session.commit()
+
+
+@app.context_processor
+def inject_constants():
+    return dict(
+        FLOWER_VARIETIES=FLOWER_VARIETIES,
+        FLOWER_COLORS=FLOWER_COLORS,
+        FLOWER_CATEGORIES=FLOWER_CATEGORIES,
+        ITEM_CATEGORIES=ITEM_CATEGORIES,
+    )
 
 
 def allowed_file(filename):

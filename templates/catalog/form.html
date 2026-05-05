@@ -40,17 +40,23 @@
 
     <div class="mb-3">
       <label class="form-label">Variety</label>
-      <input type="text" name="variety" class="form-control"
-             value="{{ item.variety if item and item.variety else '' }}"
-             placeholder="e.g. Garden Rose, Spray Rose, Dutch Tulip">
+      <select name="variety" class="form-select">
+        <option value="">— Select variety —</option>
+        {% for v in FLOWER_VARIETIES %}
+        <option value="{{ v }}" {% if item and item.variety == v %}selected{% endif %}>{{ v }}</option>
+        {% endfor %}
+      </select>
       <div class="text-muted mt-1" style="font-size:12px">The specific type within the flower family</div>
     </div>
 
     <div class="mb-3">
       <label class="form-label">Color</label>
-      <input type="text" name="color" class="form-control"
-             value="{{ item.color if item and item.color else '' }}"
-             placeholder="e.g. Red, Blush, Coral, White">
+      <select name="color" class="form-select">
+        <option value="">— Select color —</option>
+        {% for c in FLOWER_COLORS %}
+        <option value="{{ c }}" {% if item and item.color == c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
     </div>
 
     <div class="mb-1">

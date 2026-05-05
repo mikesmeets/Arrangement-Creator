@@ -6,6 +6,44 @@ db = SQLAlchemy()
 FLOWER_CATEGORIES = ['Focal', 'Secondary', 'Filler', 'Greenery', 'Accent', 'Textural']
 ITEM_CATEGORIES   = ['Flower', 'Hard Good', 'Labor', 'Other']
 
+FLOWER_VARIETIES = [
+    # Roses
+    'Garden Rose', 'Spray Rose', 'Standard Rose', 'David Austin Rose',
+    # Spring/Classic
+    'Anemone', 'Cosmos', 'Dahlia', 'Hyacinth', 'Hydrangea', 'Lisianthus',
+    'Peony', 'Ranunculus', 'Sweet Pea', 'Tulip', 'French Tulip', 'Parrot Tulip',
+    # Summer
+    'Delphinium', 'Foxglove', 'Iris', 'Larkspur', 'Lavender', 'Marigold',
+    'Scabiosa', 'Snapdragon', 'Sunflower', 'Zinnia',
+    # Tropical / Specialty
+    'Bird of Paradise', 'Ginger', 'Heliconia', 'Orchid', 'Protea', 'Banksia',
+    'Leucadendron', 'Anthurium',
+    # Year-round
+    'Alstroemeria', 'Carnation', 'Mini Carnation', 'Chrysanthemum',
+    'Gerbera Daisy', 'Lily', 'Casa Blanca Lily', 'Calla Lily',
+    'Asiatic Lily', 'Stargazer Lily', 'Stock', 'Thistle',
+    # Fillers
+    "Baby's Breath", 'Hypericum Berry', "Queen Anne's Lace", 'Statice',
+    'Wax Flower', 'Limonium', 'Ammobium',
+    # Greenery
+    'Dusty Miller', 'Eucalyptus', 'Fern', 'Italian Ruscus', 'Leather Leaf',
+    'Myrtle', 'Pittosporum', 'Salal', 'Asparagus Fern',
+]
+
+FLOWER_COLORS = [
+    'White', 'Ivory', 'Cream', 'Champagne',
+    'Yellow', 'Peach', 'Coral', 'Orange',
+    'Blush', 'Light Pink', 'Pink', 'Hot Pink', 'Fuchsia',
+    'Red', 'Burgundy', 'Wine',
+    'Mauve', 'Dusty Rose',
+    'Lavender', 'Purple', 'Deep Purple',
+    'Blue', 'Navy',
+    'Green', 'Lime',
+    'Brown', 'Terracotta', 'Rust',
+    'Black',
+    'Bi-color', 'Mixed',
+]
+
 
 class Vendor(db.Model):
     id = db.Column(db.Integer, primary_key=True)

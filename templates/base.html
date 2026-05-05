@@ -94,11 +94,21 @@
         <div id="gm_flowerFields" style="display:none">
           <div class="mb-3">
             <label class="form-label">Variety</label>
-            <input type="text" id="gm_variety" class="form-control" placeholder="e.g. Garden Rose, Spray Rose">
+            <select id="gm_variety" class="form-select">
+              <option value="">— Select variety —</option>
+              {% for v in FLOWER_VARIETIES %}
+              <option value="{{ v }}">{{ v }}</option>
+              {% endfor %}
+            </select>
           </div>
           <div class="mb-3">
             <label class="form-label">Color</label>
-            <input type="text" id="gm_color" class="form-control" placeholder="e.g. Red, Blush, White">
+            <select id="gm_color" class="form-select">
+              <option value="">— Select color —</option>
+              {% for c in FLOWER_COLORS %}
+              <option value="{{ c }}">{{ c }}</option>
+              {% endfor %}
+            </select>
           </div>
           <div class="mb-1">
             <label class="form-label">Flower Role</label>
