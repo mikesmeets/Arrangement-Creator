@@ -9,7 +9,6 @@
 
 <form method="POST" enctype="multipart/form-data">
 
-  <!-- Basic Info -->
   <div class="form-section">
     <div class="form-section-title">Details</div>
 
@@ -68,7 +67,6 @@
     </div>
   </div>
 
-  <!-- Photo -->
   <div class="form-section">
     <div class="form-section-title">Photo</div>
     {% if arrangement and arrangement.photo_path %}
@@ -79,17 +77,14 @@
     <div class="text-muted mt-1" style="font-size:12px">Use your camera or photo library</div>
   </div>
 
-  <!-- Arrangement Items -->
   <div class="form-section">
     <div class="d-flex justify-content-between align-items-center mb-1">
       <div class="form-section-title mb-0">Items &amp; Cost</div>
-      <button type="button" class="btn btn-sm btn-outline-secondary rounded-3"
-              onclick="addManualItem()">
+      <button type="button" class="btn btn-sm btn-outline-secondary rounded-3" onclick="addManualItem()">
         <i class="bi bi-plus-lg me-1"></i>Manual
       </button>
     </div>
 
-    <!-- Cost summary -->
     <div class="cost-summary mb-3">
       <div class="row text-center">
         <div class="col-3">
@@ -98,7 +93,7 @@
         </div>
         <div class="col-3">
           <div class="label">Sale Price</div>
-          <div class="value text-dark" style="font-size:16px">
+          <div class="value text-dark">
             <input type="number" name="price" id="priceInput" class="form-control form-control-sm text-center fw-bold"
                    value="{{ '%.2f' % arrangement.price if arrangement else '0.00' }}"
                    step="0.01" min="0" oninput="updateArrangementCost()"
@@ -116,14 +111,12 @@
       </div>
     </div>
 
-    <!-- Items table -->
     <div class="table-responsive mb-2">
       <table class="table table-sm mb-0" id="arrangementItemsTable">
         <thead>
           <tr>
             <th>Name</th>
-            <th>Cat.</th>
-            <th>Generic</th>
+            <th>Catalog Item</th>
             <th>Qty</th>
             <th>$/Unit</th>
             <th class="text-end">Total</th>
@@ -138,7 +131,6 @@
     </div>
   </div>
 
-  <!-- Invoice Picker -->
   <div class="form-section">
     <div class="form-section-title">Add from Invoice</div>
     {% if invoices %}
@@ -172,24 +164,11 @@
 {% block scripts %}
 <script>
 const existingArrItems = {{ items_data | tojson }};
-</script>
-<script>
 document.addEventListener('DOMContentLoaded', function () {
   if (existingArrItems && existingArrItems.length) {
     existingArrItems.forEach(function (item) { addArrangementRow(item); });
   }
   updateArrangementCost();
-
-  // Show/hide empty message
-  const observer = new MutationObserver(function () {
-    const msg = document.getElementById('noItemsMsg');
-    const body = document.getElementById('arrangementItemsBody');
-    if (msg) msg.style.display = body && body.children.length ? 'none' : 'block';
-  });
-  const body = document.getElementById('arrangementItemsBody');
-  if (body) observer.observe(body, { childList: true });
-  const msg = document.getElementById('noItemsMsg');
-  if (msg && body) msg.style.display = body.children.length ? 'none' : 'block';
 });
 </script>
 {% endblock %}

@@ -17,13 +17,24 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'heic'}
 
-from models import db, Vendor, Invoice, InvoiceItem, Arrangement, ArrangementItem, ShopifyCollection
+from models import db, Vendor, Invoice, InvoiceItem, Arrangement, ArrangementItem, ShopifyCollection, GenericItem, FLOWER_CATEGORIES, ITEM_CATEGORIES
 
 db.init_app(app)
 
 with app.app_context():
     db.create_all()
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    # Add new columns to existing DBs if upgrading from earlier schema
+    from sqlalchemy import text, inspect
+    insp = inspect(db.engine)
+    for table, col, col_def in [
+        ('invoice_item',     'generic_item_id', 'INTEGER REFERENCES generic_item(id)'),
+        ('arrangement_item', 'generic_item_id', 'INTEGER REFERENCES generic_item(id)'),
+    ]:
+        existing = [c['name'] for c in insp.get_columns(table)]
+        if col not in existing:
+            db.session.execute(text(f'ALTER TABLE {table} ADD COLUMN {col} {col_def}'))
+    db.session.commit()
 
 
 def allowed_file(filename):
@@ -46,6 +57,65 @@ def index():
                            recent_arrangements=recent_arrangements,
                            recent_invoices=recent_invoices,
                            stats=stats)
+
+
+# ─── Catalog (GenericItem) ────────────────────────────────────────────────────
+
+@app.route('/catalog')
+def catalog():
+    category_filter = request.args.get('category', '')
+    q = GenericItem.query
+    if category_filter:
+        q = q.filter_by(category=category_filter)
+    items = q.order_by(GenericItem.category, GenericItem.name).all()
+    return render_template('catalog/list.html', items=items,
+                           category_filter=category_filter,
+                           categories=ITEM_CATEGORIES)
+
+
+@app.route('/catalog/new', methods=['GET', 'POST'])
+def catalog_new():
+    if request.method == 'POST':
+        item = GenericItem(
+            name=request.form['name'],
+            category=request.form['category'],
+            variety=request.form.get('variety', '') or None,
+            color=request.form.get('color', '') or None,
+            flower_category=request.form.get('flower_category', '') or None,
+        )
+        db.session.add(item)
+        db.session.commit()
+        flash('Item added to catalog!', 'success')
+        return redirect(url_for('catalog'))
+    return render_template('catalog/form.html', item=None,
+                           categories=ITEM_CATEGORIES,
+                           flower_categories=FLOWER_CATEGORIES)
+
+
+@app.route('/catalog/<int:id>/edit', methods=['GET', 'POST'])
+def catalog_edit(id):
+    item = GenericItem.query.get_or_404(id)
+    if request.method == 'POST':
+        item.name = request.form['name']
+        item.category = request.form['category']
+        item.variety = request.form.get('variety', '') or None
+        item.color = request.form.get('color', '') or None
+        item.flower_category = request.form.get('flower_category', '') or None
+        db.session.commit()
+        flash('Item updated!', 'success')
+        return redirect(url_for('catalog'))
+    return render_template('catalog/form.html', item=item,
+                           categories=ITEM_CATEGORIES,
+                           flower_categories=FLOWER_CATEGORIES)
+
+
+@app.route('/catalog/<int:id>/delete', methods=['POST'])
+def catalog_delete(id):
+    item = GenericItem.query.get_or_404(id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Item removed from catalog.', 'info')
+    return redirect(url_for('catalog'))
 
 
 # ─── Vendors ──────────────────────────────────────────────────────────────────
@@ -108,23 +178,31 @@ def invoices():
 
 
 def _save_invoice_items(invoice_id):
-    names = request.form.getlist('item_name[]')
-    categories = request.form.getlist('item_category[]')
-    generic_types = request.form.getlist('item_generic_type[]')
-    quantities = request.form.getlist('item_quantity[]')
-    prices = request.form.getlist('item_price[]')
+    names           = request.form.getlist('item_name[]')
+    categories      = request.form.getlist('item_category[]')
+    quantities      = request.form.getlist('item_quantity[]')
+    prices          = request.form.getlist('item_price[]')
+    generic_ids     = request.form.getlist('item_generic_item_id[]')
 
     for i in range(len(names)):
-        if names[i].strip():
-            item = InvoiceItem(
-                invoice_id=invoice_id,
-                name=names[i].strip(),
-                category=categories[i] if i < len(categories) else 'Flower',
-                generic_type=generic_types[i] if i < len(generic_types) else '',
-                quantity=float(quantities[i]) if i < len(quantities) and quantities[i] else 1,
-                unit_price=float(prices[i]) if i < len(prices) and prices[i] else 0,
-            )
-            db.session.add(item)
+        if not names[i].strip():
+            continue
+        g_id = generic_ids[i] if i < len(generic_ids) and generic_ids[i] else None
+        # Auto-fill category from generic item if available
+        cat = categories[i] if i < len(categories) and categories[i] else ''
+        if g_id and not cat:
+            gi = GenericItem.query.get(int(g_id))
+            if gi:
+                cat = gi.category
+        item = InvoiceItem(
+            invoice_id=invoice_id,
+            generic_item_id=int(g_id) if g_id else None,
+            name=names[i].strip(),
+            category=cat,
+            quantity=float(quantities[i]) if i < len(quantities) and quantities[i] else 1,
+            unit_price=float(prices[i]) if i < len(prices) and prices[i] else 0,
+        )
+        db.session.add(item)
 
 
 @app.route('/invoices/new', methods=['GET', 'POST'])
@@ -164,8 +242,13 @@ def invoice_edit(id):
         db.session.commit()
         flash('Invoice updated!', 'success')
         return redirect(url_for('invoice_detail', id=invoice.id))
-    items_data = [{'name': i.name, 'category': i.category or '', 'generic_type': i.generic_type or '',
-                   'quantity': i.quantity, 'unit_price': i.unit_price} for i in invoice.items]
+    items_data = [{
+        'name': i.name,
+        'category': i.category or '',
+        'quantity': i.quantity,
+        'unit_price': i.unit_price,
+        'generic_item_id': i.generic_item_id or '',
+    } for i in invoice.items]
     return render_template('invoices/form.html', vendors=all_vendors, invoice=invoice, items_data=items_data)
 
 
@@ -187,26 +270,33 @@ def arrangements():
 
 
 def _save_arrangement_items(arrangement_id):
-    names = request.form.getlist('arr_item_name[]')
-    categories = request.form.getlist('arr_item_category[]')
-    generic_types = request.form.getlist('arr_item_generic_type[]')
-    quantities = request.form.getlist('arr_item_quantity[]')
-    prices = request.form.getlist('arr_item_price[]')
-    inv_item_ids = request.form.getlist('arr_item_invoice_item_id[]')
+    names           = request.form.getlist('arr_item_name[]')
+    categories      = request.form.getlist('arr_item_category[]')
+    quantities      = request.form.getlist('arr_item_quantity[]')
+    prices          = request.form.getlist('arr_item_price[]')
+    inv_item_ids    = request.form.getlist('arr_item_invoice_item_id[]')
+    generic_ids     = request.form.getlist('arr_item_generic_item_id[]')
 
     for i in range(len(names)):
-        if names[i].strip():
-            inv_id = inv_item_ids[i] if i < len(inv_item_ids) and inv_item_ids[i] else None
-            item = ArrangementItem(
-                arrangement_id=arrangement_id,
-                invoice_item_id=int(inv_id) if inv_id else None,
-                name=names[i].strip(),
-                category=categories[i] if i < len(categories) else '',
-                generic_type=generic_types[i] if i < len(generic_types) else '',
-                quantity=float(quantities[i]) if i < len(quantities) and quantities[i] else 1,
-                unit_price=float(prices[i]) if i < len(prices) and prices[i] else 0,
-            )
-            db.session.add(item)
+        if not names[i].strip():
+            continue
+        inv_id = inv_item_ids[i] if i < len(inv_item_ids) and inv_item_ids[i] else None
+        g_id   = generic_ids[i]  if i < len(generic_ids)  and generic_ids[i]  else None
+        cat    = categories[i]   if i < len(categories)   and categories[i]   else ''
+        if g_id and not cat:
+            gi = GenericItem.query.get(int(g_id))
+            if gi:
+                cat = gi.category
+        item = ArrangementItem(
+            arrangement_id=arrangement_id,
+            invoice_item_id=int(inv_id) if inv_id else None,
+            generic_item_id=int(g_id)   if g_id   else None,
+            name=names[i].strip(),
+            category=cat,
+            quantity=float(quantities[i]) if i < len(quantities) and quantities[i] else 1,
+            unit_price=float(prices[i])   if i < len(prices)     and prices[i]     else 0,
+        )
+        db.session.add(item)
 
 
 def _handle_photo_upload(arrangement):
@@ -222,9 +312,9 @@ def _handle_photo_upload(arrangement):
 
 @app.route('/arrangements/new', methods=['GET', 'POST'])
 def arrangement_new():
-    all_vendors = Vendor.query.order_by(Vendor.name).all()
+    all_vendors  = Vendor.query.order_by(Vendor.name).all()
     all_invoices = Invoice.query.order_by(Invoice.date_purchased.desc()).all()
-    collections = ShopifyCollection.query.order_by(ShopifyCollection.title).all()
+    collections  = ShopifyCollection.query.order_by(ShopifyCollection.title).all()
 
     if request.method == 'POST':
         arrangement = Arrangement(
@@ -246,8 +336,7 @@ def arrangement_new():
 
     return render_template('arrangements/form.html',
                            vendors=all_vendors, invoices=all_invoices,
-                           collections=collections, arrangement=None,
-                           items_data=[])
+                           collections=collections, arrangement=None, items_data=[])
 
 
 @app.route('/arrangements/<int:id>')
@@ -258,10 +347,10 @@ def arrangement_detail(id):
 
 @app.route('/arrangements/<int:id>/edit', methods=['GET', 'POST'])
 def arrangement_edit(id):
-    arrangement = Arrangement.query.get_or_404(id)
-    all_vendors = Vendor.query.order_by(Vendor.name).all()
+    arrangement  = Arrangement.query.get_or_404(id)
+    all_vendors  = Vendor.query.order_by(Vendor.name).all()
     all_invoices = Invoice.query.order_by(Invoice.date_purchased.desc()).all()
-    collections = ShopifyCollection.query.order_by(ShopifyCollection.title).all()
+    collections  = ShopifyCollection.query.order_by(ShopifyCollection.title).all()
 
     if request.method == 'POST':
         arrangement.name = request.form['name']
@@ -280,9 +369,9 @@ def arrangement_edit(id):
 
     items_data = [{
         'invoice_item_id': i.invoice_item_id or '',
+        'generic_item_id': i.generic_item_id or '',
         'name': i.name,
         'category': i.category or '',
-        'generic_type': i.generic_type or '',
         'quantity': i.quantity,
         'unit_price': i.unit_price,
     } for i in arrangement.items]
@@ -305,7 +394,7 @@ def arrangement_delete(id):
 @app.route('/arrangements/<int:id>/shopify', methods=['POST'])
 def push_to_shopify(id):
     arrangement = Arrangement.query.get_or_404(id)
-    shop_url = os.environ.get('SHOPIFY_SHOP_URL', '').strip()
+    shop_url     = os.environ.get('SHOPIFY_SHOP_URL', '').strip()
     access_token = os.environ.get('SHOPIFY_ACCESS_TOKEN', '').strip()
 
     if not shop_url or not access_token:
@@ -343,17 +432,14 @@ def push_to_shopify(id):
         if resp.status_code in (200, 201):
             product = resp.json()['product']
             arrangement.shopify_product_id = str(product['id'])
-
             if arrangement.collection and arrangement.collection.shopify_id:
                 requests.post(
                     f'https://{shop_url}/admin/api/2024-01/collects.json',
                     json={'collect': {'product_id': product['id'],
                                       'collection_id': int(arrangement.collection.shopify_id)}},
                     headers=headers, timeout=10)
-
             db.session.commit()
-            action = 'updated' if arrangement.shopify_product_id else 'pushed'
-            flash(f'Successfully {action} to Shopify! Product ID: {product["id"]}', 'success')
+            flash(f'Successfully pushed to Shopify! Product ID: {product["id"]}', 'success')
         else:
             flash(f'Shopify returned {resp.status_code}: {resp.text[:200]}', 'danger')
     except Exception as e:
@@ -364,6 +450,33 @@ def push_to_shopify(id):
 
 # ─── API ──────────────────────────────────────────────────────────────────────
 
+@app.route('/api/generic-items', methods=['GET'])
+def api_generic_items():
+    category = request.args.get('category', '')
+    q = GenericItem.query
+    if category:
+        q = q.filter_by(category=category)
+    items = q.order_by(GenericItem.category, GenericItem.name).all()
+    return jsonify([i.to_dict() for i in items])
+
+
+@app.route('/api/generic-items', methods=['POST'])
+def api_generic_items_create():
+    data = request.get_json()
+    if not data or not data.get('name') or not data.get('category'):
+        return jsonify({'error': 'name and category are required'}), 400
+    item = GenericItem(
+        name=data['name'],
+        category=data['category'],
+        variety=data.get('variety') or None,
+        color=data.get('color') or None,
+        flower_category=data.get('flower_category') or None,
+    )
+    db.session.add(item)
+    db.session.commit()
+    return jsonify(item.to_dict()), 201
+
+
 @app.route('/api/invoices/<int:id>/items')
 def api_invoice_items(id):
     items = InvoiceItem.query.filter_by(invoice_id=id).all()
@@ -371,7 +484,8 @@ def api_invoice_items(id):
         'id': item.id,
         'name': item.name,
         'category': item.category or '',
-        'generic_type': item.generic_type or '',
+        'generic_item_id': item.generic_item_id or '',
+        'generic_item_label': item.generic_item.label if item.generic_item else '',
         'quantity': item.quantity,
         'unit_price': item.unit_price,
         'total': item.total,
@@ -381,31 +495,26 @@ def api_invoice_items(id):
 
 @app.route('/api/shopify/sync-collections', methods=['POST'])
 def sync_shopify_collections():
-    shop_url = os.environ.get('SHOPIFY_SHOP_URL', '').strip()
+    shop_url     = os.environ.get('SHOPIFY_SHOP_URL', '').strip()
     access_token = os.environ.get('SHOPIFY_ACCESS_TOKEN', '').strip()
-
     if not shop_url or not access_token:
         return jsonify({'error': 'Shopify credentials not configured'}), 400
 
-    headers = {'X-Shopify-Access-Token': access_token}
-    all_cols = []
+    headers   = {'X-Shopify-Access-Token': access_token}
+    all_cols  = []
     try:
         for endpoint in ('custom_collections', 'smart_collections'):
             r = requests.get(f'https://{shop_url}/admin/api/2024-01/{endpoint}.json',
                              headers=headers, timeout=10)
             all_cols.extend(r.json().get(endpoint, []))
-
         for col in all_cols:
             existing = ShopifyCollection.query.filter_by(shopify_id=str(col['id'])).first()
             if existing:
                 existing.title = col['title']
                 existing.handle = col['handle']
             else:
-                db.session.add(ShopifyCollection(
-                    shopify_id=str(col['id']),
-                    title=col['title'],
-                    handle=col['handle']))
-
+                db.session.add(ShopifyCollection(shopify_id=str(col['id']),
+                                                  title=col['title'], handle=col['handle']))
         db.session.commit()
         return jsonify({'message': f'Synced {len(all_cols)} collections'})
     except Exception as e:

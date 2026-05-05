@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Item Catalog{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1>Item Catalog</h1>
+    <p class="sub">{{ items | length }} item{% if items | length != 1 %}s{% endif %}{% if category_filter %} · {{ category_filter }}{% endif %}</p>
+  </div>
+  <a href="{{ url_for('catalog_new') }}" class="btn btn-primary-green px-4">
+    <i class="bi bi-plus-lg me-1"></i> Add
+  </a>
+</div>
+
+<!-- Category filter tabs -->
+<div class="px-3 mb-3">
+  <div class="d-flex gap-2 overflow-auto pb-1" style="scrollbar-width:none">
+    <a href="{{ url_for('catalog') }}"
+       class="btn btn-sm rounded-pill flex-shrink-0 {% if not category_filter %}btn-success{% else %}btn-outline-secondary{% endif %}">
+      All
+    </a>
+    {% for cat in categories %}
+    <a href="{{ url_for('catalog', category=cat) }}"
+       class="btn btn-sm rounded-pill flex-shrink-0 {% if category_filter == cat %}btn-success{% else %}btn-outline-secondary{% endif %}">
+      {{ cat }}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+{% if items %}
+{% set ns = namespace(last_cat='') %}
+{% for item in items %}
+
+  {% if item.category != ns.last_cat %}
+  {% if not loop.first %}</div>{% endif %}
+  <div class="section-header mt-1"><h2>{{ item.category }}</h2></div>
+  <div class="mx-3 card card-sm overflow-hidden">
+  {% set ns.last_cat = item.category %}
+  {% endif %}
+
+  <div class="list-row justify-content-between">
+    <div class="d-flex align-items-center flex-grow-1 min-w-0">
+      <div class="row-icon flex-shrink-0"
+           style="background:{% if item.category=='Flower' %}#fff3e0{% elif item.category=='Hard Good' %}#e3f2fd{% elif item.category=='Labor' %}#f3e5f5{% else %}#f5f5f5{% endif %}">
+        {% if item.category == 'Flower' %}🌸
+        {% elif item.category == 'Hard Good' %}🏺
+        {% elif item.category == 'Labor' %}🧑‍🌾
+        {% else %}📦{% endif %}
+      </div>
+      <div class="row-main">
+        <div class="row-title">{{ item.name }}</div>
+        <div class="row-sub">
+          {% if item.variety %}<span class="me-2">{{ item.variety }}</span>{% endif %}
+          {% if item.color %}
+          <span class="me-2">
+            <span class="color-dot" style="background:{{ item.color | lower }};display:inline-block;width:8px;height:8px;border-radius:50%;border:1px solid #ccc;vertical-align:middle"></span>
+            {{ item.color }}
+          </span>
+          {% endif %}
+          {% if item.flower_category %}
+          <span class="badge rounded-pill" style="font-size:10px;background:#d8f3dc;color:#2d6a4f">{{ item.flower_category }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="d-flex gap-2 ms-2">
+      <a href="{{ url_for('catalog_edit', id=item.id) }}" class="btn btn-sm btn-outline-secondary rounded-3">
+        <i class="bi bi-pencil"></i>
+      </a>
+      <form method="POST" action="{{ url_for('catalog_delete', id=item.id) }}"
+            onsubmit="return confirm('Remove {{ item.name }} from catalog?')">
+        <button type="submit" class="btn btn-sm btn-outline-danger rounded-3">
+          <i class="bi bi-trash"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {% if loop.last %}</div>{% endif %}
+{% endfor %}
+
+{% else %}
+<div class="empty-state">
+  <i class="bi bi-journal-bookmark"></i>
+  <p>No catalog items yet.<br>Add flowers, hard goods, and labor<br>to reuse across invoices and arrangements.</p>
+</div>
+{% endif %}
+
+<a href="{{ url_for('catalog_new') }}" class="fab" title="Add Catalog Item">
+  <i class="bi bi-plus-lg"></i>
+</a>
+{% endblock %}

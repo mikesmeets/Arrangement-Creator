@@ -8,7 +8,6 @@
 </div>
 
 <form method="POST">
-  <!-- Header fields -->
   <div class="form-section">
     <div class="form-section-title">Invoice Details</div>
 
@@ -44,7 +43,6 @@
     </div>
   </div>
 
-  <!-- Line items -->
   <div class="form-section">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div class="form-section-title mb-0">Line Items</div>
@@ -56,8 +54,7 @@
         <thead>
           <tr>
             <th>Name</th>
-            <th>Category</th>
-            <th>Generic Type</th>
+            <th>Catalog Item <span class="text-muted fw-normal">(+ variety · color · role)</span></th>
             <th>Qty</th>
             <th>Unit $</th>
             <th class="text-end">Total</th>
@@ -85,13 +82,11 @@
 {% block scripts %}
 <script>
 const existingInvItems = {{ items_data | tojson }};
-</script>
-<script>
 document.addEventListener('DOMContentLoaded', function () {
   if (existingInvItems && existingInvItems.length) {
-    existingInvItems.forEach(function(item) { addInvoiceRow(item); });
+    existingInvItems.forEach(function (item) { addInvoiceRow(item); });
   } else {
-    addInvoiceRow(); // start with one blank row
+    addInvoiceRow();
   }
 });
 </script>

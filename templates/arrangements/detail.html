@@ -4,7 +4,6 @@
 
 {% block content %}
 
-<!-- Photo -->
 <div class="px-3 pt-2 pb-1">
   {% if arrangement.photo_path %}
   <img src="{{ url_for('static', filename=arrangement.photo_path) }}"
@@ -14,7 +13,6 @@
   {% endif %}
 </div>
 
-<!-- Name & badges -->
 <div class="px-3 py-2">
   <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
     {% if arrangement.arrangement_type %}
@@ -36,7 +34,6 @@
   </div>
 </div>
 
-<!-- Financials -->
 <div class="mx-3 mb-3">
   <div class="cost-summary">
     <div class="row text-center">
@@ -69,19 +66,22 @@
 </div>
 {% endif %}
 
-<!-- Line items -->
 <div class="section-header">
   <h2>Line Items</h2>
-  <span class="text-muted" style="font-size:13px">{{ arrangement.items | length }} item{% if arrangement.items | length != 1 %}s{% endif %}</span>
+  <span class="text-muted" style="font-size:13px">
+    {{ arrangement.items | length }} item{% if arrangement.items | length != 1 %}s{% endif %}
+  </span>
 </div>
 
 <div class="mx-3 card card-sm overflow-hidden mb-3">
   {% if arrangement.items %}
-  {% for item in arrangement.items | sort(attribute='category') %}
+  {# Group by flower_category for flowers, then other categories #}
+  {% set sorted_items = arrangement.items | sort(attribute='category') %}
+  {% for item in sorted_items %}
   <div class="list-row">
     <div class="row-main">
       <div class="row-title">{{ item.name }}</div>
-      <div class="row-sub d-flex align-items-center gap-1 flex-wrap">
+      <div class="row-sub d-flex align-items-center gap-1 flex-wrap mt-1">
         <span class="badge rounded-pill
           {% if item.category == 'Flower' %}badge-flower
           {% elif item.category == 'Hard Good' %}badge-hardgood
@@ -89,11 +89,25 @@
           {% else %}badge-other{% endif %}" style="font-size:10px">
           {{ item.category or 'Other' }}
         </span>
-        {% if item.generic_type %}
-        <span>{{ item.generic_type }}</span>
+        {% if item.generic_item %}
+          {% set gi = item.generic_item %}
+          {% if gi.variety %}
+          <span class="text-muted">{{ gi.variety }}</span>
+          {% endif %}
+          {% if gi.color %}
+          <span class="d-flex align-items-center gap-1">
+            <span style="width:8px;height:8px;border-radius:50%;background:{{ gi.color | lower }};border:1px solid #ccc;display:inline-block"></span>
+            {{ gi.color }}
+          </span>
+          {% endif %}
+          {% if gi.flower_category %}
+          <span class="badge rounded-pill" style="font-size:10px;background:#d8f3dc;color:#2d6a4f">
+            {{ gi.flower_category }}
+          </span>
+          {% endif %}
         {% endif %}
         {% if item.invoice_item %}
-        <span>· from {{ item.invoice_item.invoice.vendor.name }}</span>
+        <span class="text-muted">· {{ item.invoice_item.invoice.vendor.name }}</span>
         {% endif %}
       </div>
     </div>
@@ -112,7 +126,6 @@
   {% endif %}
 </div>
 
-<!-- Actions -->
 <div class="px-3 pb-2 d-flex gap-2">
   <a href="{{ url_for('arrangement_edit', id=arrangement.id) }}"
      class="btn btn-outline-secondary flex-fill rounded-3">
@@ -126,7 +139,6 @@
   </form>
 </div>
 
-<!-- Shopify push -->
 <div class="px-3 pb-5">
   <form method="POST" action="{{ url_for('push_to_shopify', id=arrangement.id) }}"
         onsubmit="return confirm('Push \'{{ arrangement.name }}\' to Shopify?')">

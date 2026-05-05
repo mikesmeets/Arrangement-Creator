@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% set back_url = url_for('catalog') %}
+{% block title %}{{ 'Edit Item' if item else 'New Catalog Item' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ 'Edit Item' if item else 'New Catalog Item' }}</h1>
+</div>
+
+<form method="POST">
+  <div class="form-section">
+    <div class="form-section-title">Item Info</div>
+
+    <div class="mb-3">
+      <label class="form-label">Name *</label>
+      <input type="text" name="name" class="form-control" required
+             value="{{ item.name if item else '' }}"
+             placeholder="e.g. Red Garden Rose">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Category *</label>
+      <select name="category" id="categorySelect" class="form-select" required
+              onchange="toggleFlowerFields()">
+        <option value="">— Select —</option>
+        {% for cat in categories %}
+        <option value="{{ cat }}"
+                {% if item and item.category == cat %}selected{% endif %}>
+          {{ cat }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <!-- Flower-specific fields -->
+  <div class="form-section" id="flowerFields"
+       style="{{ 'display:none' if not item or item.category != 'Flower' else '' }}">
+    <div class="form-section-title">Flower Details</div>
+
+    <div class="mb-3">
+      <label class="form-label">Variety</label>
+      <input type="text" name="variety" class="form-control"
+             value="{{ item.variety if item and item.variety else '' }}"
+             placeholder="e.g. Garden Rose, Spray Rose, Dutch Tulip">
+      <div class="text-muted mt-1" style="font-size:12px">The specific type within the flower family</div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Color</label>
+      <input type="text" name="color" class="form-control"
+             value="{{ item.color if item and item.color else '' }}"
+             placeholder="e.g. Red, Blush, Coral, White">
+    </div>
+
+    <div class="mb-1">
+      <label class="form-label">Flower Role</label>
+      <div class="row g-2 mt-1">
+        {% for fc in flower_categories %}
+        <div class="col-6">
+          <label class="flower-cat-option w-100 {% if item and item.flower_category == fc %}selected{% endif %}"
+                 style="display:block;padding:10px 12px;border:2px solid #e0e0e0;border-radius:10px;cursor:pointer;font-size:14px;font-weight:500;text-align:center;transition:.15s"
+                 onclick="selectFlowerCat('{{ fc }}', this)">
+            <input type="radio" name="flower_category" value="{{ fc }}" class="d-none"
+                   {% if item and item.flower_category == fc %}checked{% endif %}>
+            {{ fc }}
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="text-muted mt-2" style="font-size:12px">
+        <strong>Focal</strong> — statement blooms · <strong>Secondary</strong> — supporting flowers ·
+        <strong>Filler</strong> — small accent blooms · <strong>Greenery</strong> — foliage ·
+        <strong>Accent</strong> — pods &amp; berries · <strong>Textural</strong> — unique texture
+      </div>
+    </div>
+  </div>
+
+  <div class="px-3 pb-4">
+    <button type="submit" class="btn btn-primary-green w-100">
+      <i class="bi bi-check-lg me-1"></i> {{ 'Save Changes' if item else 'Add to Catalog' }}
+    </button>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleFlowerFields() {
+  const cat = document.getElementById('categorySelect').value;
+  document.getElementById('flowerFields').style.display = cat === 'Flower' ? '' : 'none';
+}
+
+function selectFlowerCat(value, el) {
+  document.querySelectorAll('.flower-cat-option').forEach(function(o) {
+    o.style.borderColor = '#e0e0e0';
+    o.style.background  = '';
+    o.style.color       = '';
+    o.classList.remove('selected');
+  });
+  el.style.borderColor = '#2d6a4f';
+  el.style.background  = '#d8f3dc';
+  el.style.color       = '#2d6a4f';
+  el.classList.add('selected');
+  el.querySelector('input[type=radio]').checked = true;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  toggleFlowerFields();
+  // Restore selected state on page load (edit mode)
+  document.querySelectorAll('.flower-cat-option input[type=radio]:checked').forEach(function(inp) {
+    selectFlowerCat(inp.value, inp.closest('.flower-cat-option'));
+  });
+});
+</script>
+{% endblock %}
