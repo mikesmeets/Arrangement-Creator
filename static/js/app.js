@@ -95,9 +95,11 @@ let invRowId = 0;
 
 function addInvoiceRow(data) {
   invRowId++;
-  const d    = data || {};
-  const line = ((d.quantity || 1) * (d.unit_price || 0)).toFixed(2);
-  const row  = document.createElement('tr');
+  const d         = data || {};
+  const qty       = d.quantity  || 1;
+  const unitPrice = d.unit_price || 0;
+  const lineTotal = (qty * unitPrice).toFixed(2);
+  const row       = document.createElement('tr');
   row.id = `inv_row_${invRowId}`;
   row.innerHTML = `
     <td style="min-width:130px">
@@ -122,14 +124,18 @@ function addInvoiceRow(data) {
     </td>
     <td style="min-width:75px">
       <input type="number" name="item_quantity[]" class="form-control form-control-sm inv-qty"
-             value="${d.quantity || 1}" step="0.01" min="0.01" oninput="updateInvoiceTotal()">
+             value="${qty}" step="0.01" min="0.01" oninput="recalcInvRow(this)">
     </td>
-    <td style="min-width:85px">
-      <input type="number" name="item_price[]" class="form-control form-control-sm inv-price"
-             value="${d.unit_price !== undefined ? d.unit_price : ''}"
-             step="0.01" min="0" placeholder="0.00" oninput="updateInvoiceTotal()">
+    <td style="min-width:90px">
+      <input type="number" class="form-control form-control-sm inv-line-total-input"
+             value="${lineTotal}" step="0.01" min="0" placeholder="0.00" oninput="recalcInvRow(this)">
     </td>
-    <td class="inv-line-total fw-semibold text-end" style="min-width:70px">$${line}</td>
+    <td style="min-width:80px">
+      <input type="hidden" name="item_price[]" class="inv-unit-price" value="${unitPrice}">
+      <span class="inv-unit-price-display text-muted" style="font-size:13px">
+        $${unitPrice > 0 ? unitPrice.toFixed(2) : '—'}
+      </span>
+    </td>
     <td>
       <button type="button" class="btn btn-sm btn-outline-danger"
               onclick="this.closest('tr').remove(); updateInvoiceTotal();">
@@ -149,15 +155,23 @@ function setRowGeneric(row, item) {
   onGenericSelectChange(sel);
 }
 
+function recalcInvRow(input) {
+  const row       = input.closest('tr');
+  const qty       = parseFloat(row.querySelector('.inv-qty')?.value)              || 0;
+  const lineTotal = parseFloat(row.querySelector('.inv-line-total-input')?.value) || 0;
+  const unitPrice = qty > 0 ? lineTotal / qty : 0;
+  const hidden    = row.querySelector('.inv-unit-price');
+  const display   = row.querySelector('.inv-unit-price-display');
+  if (hidden)  hidden.value        = unitPrice.toFixed(4);
+  if (display) display.textContent = qty > 0 ? '$' + unitPrice.toFixed(2) : '—';
+  updateInvoiceTotal();
+}
+
 function updateInvoiceTotal() {
   let total = 0;
   document.querySelectorAll('#invoiceLineItems tr').forEach(function (row) {
-    const qty   = parseFloat(row.querySelector('.inv-qty')?.value)   || 0;
-    const price = parseFloat(row.querySelector('.inv-price')?.value) || 0;
-    const line  = qty * price;
+    const line = parseFloat(row.querySelector('.inv-line-total-input')?.value) || 0;
     total += line;
-    const cell = row.querySelector('.inv-line-total');
-    if (cell) cell.textContent = '$' + line.toFixed(2);
   });
   const el = document.getElementById('invoiceTotalDisplay');
   if (el) el.textContent = '$' + total.toFixed(2);
