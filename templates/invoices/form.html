@@ -53,6 +53,8 @@
     {% endif %}
     <input type="file" id="photoInput" name="photo" accept="image/*" class="d-none"
            onchange="showInvPhotoPreview(this)">
+    <input type="file" id="fileInput" name="photo" accept="image/*,application/pdf" class="d-none"
+           onchange="showInvPhotoPreview(this)">
     <div class="d-flex gap-2">
       <button type="button" class="btn btn-outline-secondary flex-fill rounded-3"
               onclick="triggerInvPhoto(true)">
@@ -62,9 +64,16 @@
               onclick="triggerInvPhoto(false)">
         <i class="bi bi-image me-1"></i> Library
       </button>
+      <button type="button" class="btn btn-outline-secondary flex-fill rounded-3"
+              onclick="document.getElementById('fileInput').click()">
+        <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+      </button>
     </div>
     <div id="photoPreview" class="mt-2" style="display:none">
       <img id="photoPreviewImg" class="rounded-3 w-100" style="max-height:200px;object-fit:cover">
+      <div id="pdfPreviewIcon" class="rounded-3 p-3 text-center" style="display:none;background:#fff3e0">
+        <i class="bi bi-file-earmark-pdf-fill text-danger" style="font-size:48px"></i>
+      </div>
       <p class="text-muted mt-1 mb-0" style="font-size:12px" id="photoPreviewName"></p>
     </div>
   </div>
@@ -132,8 +141,15 @@ function showInvPhotoPreview(input) {
   const preview = document.getElementById('photoPreview');
   const img     = document.getElementById('photoPreviewImg');
   const name    = document.getElementById('photoPreviewName');
-  img.src = URL.createObjectURL(file);
   name.textContent = file.name;
+  if (file.type === 'application/pdf') {
+    img.style.display = 'none';
+    document.getElementById('pdfPreviewIcon').style.display = '';
+  } else {
+    img.src = URL.createObjectURL(file);
+    img.style.display = '';
+    document.getElementById('pdfPreviewIcon').style.display = 'none';
+  }
   preview.style.display = '';
 }
 </script>

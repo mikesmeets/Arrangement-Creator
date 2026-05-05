@@ -15,7 +15,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'heic'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'heic', 'pdf'}
 
 from models import db, Vendor, Invoice, InvoiceItem, Arrangement, ArrangementItem, ShopifyCollection, GenericItem, FLOWER_CATEGORIES, ITEM_CATEGORIES, FLOWER_VARIETIES, FLOWER_COLORS
 
@@ -217,10 +217,9 @@ def _save_invoice_items(invoice_id):
 
 
 def _handle_invoice_photo(invoice):
-    if 'photo' not in request.files:
-        return
-    file = request.files['photo']
-    if file and file.filename and allowed_file(file.filename):
+    # Pick the first non-empty file across all 'photo' inputs (image or PDF)
+    file = next((f for f in request.files.getlist('photo') if f and f.filename), None)
+    if file and allowed_file(file.filename):
         ext = file.filename.rsplit('.', 1)[1].lower()
         filename = secure_filename(f"inv_{datetime.now().strftime('%Y%m%d%H%M%S')}_{invoice.id}.{ext}")
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
