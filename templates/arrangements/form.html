@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% set back_url = url_for('arrangements') %}
+{% block title %}{{ 'Edit Arrangement' if arrangement else 'New Arrangement' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ 'Edit Arrangement' if arrangement else 'New Arrangement' }}</h1>
+</div>
+
+<form method="POST" enctype="multipart/form-data">
+
+  <!-- Basic Info -->
+  <div class="form-section">
+    <div class="form-section-title">Details</div>
+
+    <div class="mb-3">
+      <label class="form-label">Name *</label>
+      <input type="text" name="name" class="form-control" required
+             value="{{ arrangement.name if arrangement else '' }}"
+             placeholder="e.g. Spring Blush Centerpiece">
+    </div>
+
+    <div class="row g-2 mb-3">
+      <div class="col-6">
+        <label class="form-label">Date *</label>
+        <input type="date" name="date_created" class="form-control" required
+               value="{{ arrangement.date_created.strftime('%Y-%m-%d') if arrangement else '' }}">
+      </div>
+      <div class="col-6">
+        <label class="form-label">Type</label>
+        <select name="arrangement_type" class="form-select">
+          <option value="">— Select —</option>
+          {% for t in ['Arrangement', 'Bouquet', 'Centerpiece', 'Vase', 'Corsage', 'Boutonnière', 'Wreath', 'Other'] %}
+          <option value="{{ t }}" {% if arrangement and arrangement.arrangement_type == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">SKU</label>
+      <input type="text" name="sku" class="form-control"
+             value="{{ arrangement.sku if arrangement else '' }}" placeholder="e.g. TB-SPR-001">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Description</label>
+      <textarea name="description" class="form-control" rows="3"
+                placeholder="Describe the arrangement for Shopify…">{{ arrangement.description if arrangement else '' }}</textarea>
+    </div>
+
+    <div class="mb-1">
+      <label class="form-label">
+        Shopify Collection
+        <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-success" id="syncCollectionsBtn"
+                onclick="syncShopifyCollections()" style="font-size:12px">
+          <i class="bi bi-cloud-download"></i> Sync
+        </button>
+      </label>
+      <select name="collection_id" class="form-select">
+        <option value="">— No collection —</option>
+        {% for c in collections %}
+        <option value="{{ c.id }}" {% if arrangement and arrangement.collection_id == c.id %}selected{% endif %}>
+          {{ c.title }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <!-- Photo -->
+  <div class="form-section">
+    <div class="form-section-title">Photo</div>
+    {% if arrangement and arrangement.photo_path %}
+    <img src="{{ url_for('static', filename=arrangement.photo_path) }}"
+         class="rounded-3 mb-3" style="width:100%;max-height:200px;object-fit:cover">
+    {% endif %}
+    <input type="file" name="photo" class="form-control" accept="image/*">
+    <div class="text-muted mt-1" style="font-size:12px">Use your camera or photo library</div>
+  </div>
+
+  <!-- Arrangement Items -->
+  <div class="form-section">
+    <div class="d-flex justify-content-between align-items-center mb-1">
+      <div class="form-section-title mb-0">Items &amp; Cost</div>
+      <button type="button" class="btn btn-sm btn-outline-secondary rounded-3"
+              onclick="addManualItem()">
+        <i class="bi bi-plus-lg me-1"></i>Manual
+      </button>
+    </div>
+
+    <!-- Cost summary -->
+    <div class="cost-summary mb-3">
+      <div class="row text-center">
+        <div class="col-3">
+          <div class="label">Cost</div>
+          <div class="value" id="costDisplay">$0.00</div>
+        </div>
+        <div class="col-3">
+          <div class="label">Sale Price</div>
+          <div class="value text-dark" style="font-size:16px">
+            <input type="number" name="price" id="priceInput" class="form-control form-control-sm text-center fw-bold"
+                   value="{{ '%.2f' % arrangement.price if arrangement else '0.00' }}"
+                   step="0.01" min="0" oninput="updateArrangementCost()"
+                   style="border:none;background:transparent;font-size:18px;font-weight:800;color:#2d6a4f;padding:0;width:80px;margin:0 auto">
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="label">Profit</div>
+          <div class="value profit-pos" id="profitDisplay">$0.00</div>
+        </div>
+        <div class="col-3">
+          <div class="label">Markup</div>
+          <div class="value" id="markupDisplay" style="font-size:16px">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Items table -->
+    <div class="table-responsive mb-2">
+      <table class="table table-sm mb-0" id="arrangementItemsTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Cat.</th>
+            <th>Generic</th>
+            <th>Qty</th>
+            <th>$/Unit</th>
+            <th class="text-end">Total</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="arrangementItemsBody"></tbody>
+      </table>
+    </div>
+    <div class="text-muted text-center" id="noItemsMsg" style="font-size:13px;padding:12px 0">
+      No items yet — add from an invoice below or tap Manual.
+    </div>
+  </div>
+
+  <!-- Invoice Picker -->
+  <div class="form-section">
+    <div class="form-section-title">Add from Invoice</div>
+    {% if invoices %}
+    <select id="invoicePickerSelect" class="form-select mb-3">
+      <option value="">— Select an invoice —</option>
+      {% for inv in invoices %}
+      <option value="{{ inv.id }}">
+        {{ inv.vendor.name }} · {{ inv.date_purchased.strftime('%b %d, %Y') }}
+        (${{ '%.2f' % inv.total }})
+      </option>
+      {% endfor %}
+    </select>
+    <div id="invoiceItemsList"></div>
+    {% else %}
+    <p class="text-muted" style="font-size:13px">
+      No invoices found. <a href="{{ url_for('invoice_new') }}">Add an invoice</a> to pick from inventory.
+    </p>
+    {% endif %}
+  </div>
+
+  <div class="px-3 pb-5">
+    <button type="submit" class="btn btn-primary-green w-100">
+      <i class="bi bi-check-lg me-1"></i>
+      {{ 'Save Changes' if arrangement else 'Create Arrangement' }}
+    </button>
+  </div>
+
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const existingArrItems = {{ items_data | tojson }};
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (existingArrItems && existingArrItems.length) {
+    existingArrItems.forEach(function (item) { addArrangementRow(item); });
+  }
+  updateArrangementCost();
+
+  // Show/hide empty message
+  const observer = new MutationObserver(function () {
+    const msg = document.getElementById('noItemsMsg');
+    const body = document.getElementById('arrangementItemsBody');
+    if (msg) msg.style.display = body && body.children.length ? 'none' : 'block';
+  });
+  const body = document.getElementById('arrangementItemsBody');
+  if (body) observer.observe(body, { childList: true });
+  const msg = document.getElementById('noItemsMsg');
+  if (msg && body) msg.style.display = body.children.length ? 'none' : 'block';
+});
+</script>
+{% endblock %}

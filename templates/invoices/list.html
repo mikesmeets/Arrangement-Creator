@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Invoices{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1>Invoices</h1>
+    <p class="sub">{{ invoices | length }} invoice{% if invoices | length != 1 %}s{% endif %}</p>
+  </div>
+  <a href="{{ url_for('invoice_new') }}" class="btn btn-primary-green px-4">
+    <i class="bi bi-plus-lg me-1"></i> Add
+  </a>
+</div>
+
+{% if invoices %}
+<div class="mx-3 card card-sm overflow-hidden">
+  {% for inv in invoices %}
+  <a href="{{ url_for('invoice_detail', id=inv.id) }}" class="list-row">
+    <div class="row-icon" style="background:#fff8e1">🧾</div>
+    <div class="row-main">
+      <div class="row-title">{{ inv.vendor.name }}</div>
+      <div class="row-sub">
+        {{ inv.date_purchased.strftime('%b %d, %Y') }}
+        · {{ inv.items | length }} item{% if inv.items | length != 1 %}s{% endif %}
+      </div>
+    </div>
+    <div class="row-right">
+      <div class="row-amount">${{ '%.2f' % inv.total }}</div>
+      <div class="text-muted" style="font-size:11px">
+        <i class="bi bi-chevron-right"></i>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <i class="bi bi-receipt"></i>
+  <p>No invoices yet.<br>Add an invoice to start tracking purchases.</p>
+</div>
+{% endif %}
+
+<a href="{{ url_for('invoice_new') }}" class="fab" title="New Invoice">
+  <i class="bi bi-plus-lg"></i>
+</a>
+{% endblock %}

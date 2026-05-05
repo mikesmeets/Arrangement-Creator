@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% set back_url = url_for('arrangements') %}
+{% block title %}{{ arrangement.name }}{% endblock %}
+
+{% block content %}
+
+<!-- Photo -->
+<div class="px-3 pt-2 pb-1">
+  {% if arrangement.photo_path %}
+  <img src="{{ url_for('static', filename=arrangement.photo_path) }}"
+       class="detail-photo" alt="{{ arrangement.name }}">
+  {% else %}
+  <div class="detail-photo-placeholder">🌷</div>
+  {% endif %}
+</div>
+
+<!-- Name & badges -->
+<div class="px-3 py-2">
+  <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+    {% if arrangement.arrangement_type %}
+    <span class="detail-badge">{{ arrangement.arrangement_type }}</span>
+    {% endif %}
+    {% if arrangement.sku %}
+    <span class="text-muted" style="font-size:13px">SKU: {{ arrangement.sku }}</span>
+    {% endif %}
+    {% if arrangement.shopify_product_id %}
+    <span class="badge rounded-pill" style="background:#96bf48;color:#fff;font-size:11px">
+      <i class="bi bi-bag-check me-1"></i>On Shopify
+    </span>
+    {% endif %}
+  </div>
+  <h2 style="font-size:22px;font-weight:800;margin:0">{{ arrangement.name }}</h2>
+  <div class="text-muted" style="font-size:13px;margin-top:2px">
+    {{ arrangement.date_created.strftime('%B %d, %Y') }}
+    {% if arrangement.collection %}· {{ arrangement.collection.title }}{% endif %}
+  </div>
+</div>
+
+<!-- Financials -->
+<div class="mx-3 mb-3">
+  <div class="cost-summary">
+    <div class="row text-center">
+      <div class="col-3">
+        <div class="label">Cost</div>
+        <div class="value" style="font-size:17px">${{ '%.2f' % arrangement.cost }}</div>
+      </div>
+      <div class="col-3">
+        <div class="label">Price</div>
+        <div class="value" style="font-size:17px">${{ '%.2f' % arrangement.price }}</div>
+      </div>
+      <div class="col-3">
+        <div class="label">Profit</div>
+        <div class="value {{ 'profit-pos' if arrangement.profit >= 0 else 'profit-neg' }}" style="font-size:17px">
+          {% if arrangement.profit >= 0 %}+{% endif %}${{ '%.2f' % arrangement.profit }}
+        </div>
+      </div>
+      <div class="col-3">
+        <div class="label">Markup</div>
+        <div class="value" style="font-size:17px">{{ '%.2f' % arrangement.markup }}x</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if arrangement.description %}
+<div class="mx-3 mb-3 card card-sm p-3">
+  <div class="text-muted mb-1" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Description</div>
+  <div style="font-size:14px;line-height:1.5">{{ arrangement.description }}</div>
+</div>
+{% endif %}
+
+<!-- Line items -->
+<div class="section-header">
+  <h2>Line Items</h2>
+  <span class="text-muted" style="font-size:13px">{{ arrangement.items | length }} item{% if arrangement.items | length != 1 %}s{% endif %}</span>
+</div>
+
+<div class="mx-3 card card-sm overflow-hidden mb-3">
+  {% if arrangement.items %}
+  {% for item in arrangement.items | sort(attribute='category') %}
+  <div class="list-row">
+    <div class="row-main">
+      <div class="row-title">{{ item.name }}</div>
+      <div class="row-sub d-flex align-items-center gap-1 flex-wrap">
+        <span class="badge rounded-pill
+          {% if item.category == 'Flower' %}badge-flower
+          {% elif item.category == 'Hard Good' %}badge-hardgood
+          {% elif item.category == 'Labor' %}badge-labor
+          {% else %}badge-other{% endif %}" style="font-size:10px">
+          {{ item.category or 'Other' }}
+        </span>
+        {% if item.generic_type %}
+        <span>{{ item.generic_type }}</span>
+        {% endif %}
+        {% if item.invoice_item %}
+        <span>· from {{ item.invoice_item.invoice.vendor.name }}</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="row-right">
+      <div class="row-amount">${{ '%.2f' % item.total }}</div>
+      <div class="text-muted" style="font-size:11px">{{ item.quantity }} × ${{ '%.2f' % item.unit_price }}</div>
+    </div>
+  </div>
+  {% endfor %}
+  <div class="d-flex justify-content-between px-3 py-2 bg-light fw-bold" style="font-size:15px">
+    <span>Total Cost</span>
+    <span class="text-success">${{ '%.2f' % arrangement.cost }}</span>
+  </div>
+  {% else %}
+  <div class="p-4 text-center text-muted">No items added yet.</div>
+  {% endif %}
+</div>
+
+<!-- Actions -->
+<div class="px-3 pb-2 d-flex gap-2">
+  <a href="{{ url_for('arrangement_edit', id=arrangement.id) }}"
+     class="btn btn-outline-secondary flex-fill rounded-3">
+    <i class="bi bi-pencil me-1"></i> Edit
+  </a>
+  <form method="POST" action="{{ url_for('arrangement_delete', id=arrangement.id) }}" class="flex-fill"
+        onsubmit="return confirm('Delete {{ arrangement.name }}? This cannot be undone.')">
+    <button type="submit" class="btn btn-outline-danger w-100 rounded-3">
+      <i class="bi bi-trash me-1"></i> Delete
+    </button>
+  </form>
+</div>
+
+<!-- Shopify push -->
+<div class="px-3 pb-5">
+  <form method="POST" action="{{ url_for('push_to_shopify', id=arrangement.id) }}"
+        onsubmit="return confirm('Push \'{{ arrangement.name }}\' to Shopify?')">
+    <button type="submit" class="btn btn-shopify w-100">
+      <i class="bi bi-bag-check me-1"></i>
+      {{ 'Update on Shopify' if arrangement.shopify_product_id else 'Push to Shopify' }}
+    </button>
+  </form>
+  {% if arrangement.shopify_product_id %}
+  <div class="text-center text-muted mt-1" style="font-size:12px">
+    Product ID: {{ arrangement.shopify_product_id }}
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

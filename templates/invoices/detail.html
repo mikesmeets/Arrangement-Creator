@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% set back_url = url_for('invoices') %}
+{% block title %}Invoice — {{ invoice.vendor.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ invoice.vendor.name }}</h1>
+  <p class="sub">{{ invoice.date_purchased.strftime('%B %d, %Y') }}</p>
+</div>
+
+<!-- Summary bar -->
+<div class="mx-3 mb-3">
+  <div class="cost-summary">
+    <div class="row text-center">
+      <div class="col-4">
+        <div class="label">Items</div>
+        <div class="value">{{ invoice.items | length }}</div>
+      </div>
+      <div class="col-4">
+        <div class="label">Total</div>
+        <div class="value">${{ '%.2f' % invoice.total }}</div>
+      </div>
+      <div class="col-4">
+        <div class="label">Vendor Type</div>
+        <div class="value" style="font-size:14px">{{ invoice.vendor.vendor_type or '—' }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if invoice.notes %}
+<div class="mx-3 mb-3">
+  <div class="card card-sm p-3">
+    <div class="text-muted" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Notes</div>
+    <div style="font-size:14px;margin-top:4px">{{ invoice.notes }}</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Line items -->
+<div class="section-header">
+  <h2>Line Items</h2>
+</div>
+
+<div class="mx-3 card card-sm overflow-hidden mb-3">
+  {% if invoice.items %}
+  {% for item in invoice.items %}
+  <div class="list-row">
+    <div class="row-main">
+      <div class="row-title">{{ item.name }}</div>
+      <div class="row-sub">
+        <span class="badge rounded-pill
+          {% if item.category == 'Flower' %}badge-flower
+          {% elif item.category == 'Hard Good' %}badge-hardgood
+          {% elif item.category == 'Labor' %}badge-labor
+          {% else %}badge-other{% endif %}" style="font-size:10px">
+          {{ item.category or 'Other' }}
+        </span>
+        {% if item.generic_type %}· {{ item.generic_type }}{% endif %}
+        · {{ item.remaining_quantity | round(2) }} remaining
+      </div>
+    </div>
+    <div class="row-right">
+      <div class="row-amount">${{ '%.2f' % item.total }}</div>
+      <div class="text-muted" style="font-size:11px">
+        {{ item.quantity }} × ${{ '%.2f' % item.unit_price }}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  <!-- Total row -->
+  <div class="d-flex justify-content-between px-3 py-2 bg-light fw-bold" style="font-size:15px">
+    <span>Total</span>
+    <span class="text-success">${{ '%.2f' % invoice.total }}</span>
+  </div>
+  {% else %}
+  <div class="p-4 text-center text-muted">No line items.</div>
+  {% endif %}
+</div>
+
+<!-- Actions -->
+<div class="px-3 pb-4 d-flex gap-2">
+  <a href="{{ url_for('invoice_edit', id=invoice.id) }}" class="btn btn-outline-secondary flex-fill rounded-3">
+    <i class="bi bi-pencil me-1"></i> Edit
+  </a>
+  <form method="POST" action="{{ url_for('invoice_delete', id=invoice.id) }}" class="flex-fill"
+        onsubmit="return confirm('Delete this invoice? This cannot be undone.')">
+    <button type="submit" class="btn btn-outline-danger w-100 rounded-3">
+      <i class="bi bi-trash me-1"></i> Delete
+    </button>
+  </form>
+</div>
+{% endblock %}

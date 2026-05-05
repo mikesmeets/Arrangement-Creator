@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Vendors{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1>Vendors</h1>
+    <p class="sub">{{ vendors | length }} vendor{% if vendors | length != 1 %}s{% endif %}</p>
+  </div>
+  <a href="{{ url_for('vendor_new') }}" class="btn btn-primary-green px-4">
+    <i class="bi bi-plus-lg me-1"></i> Add
+  </a>
+</div>
+
+{% if vendors %}
+<div class="mx-3 card card-sm overflow-hidden">
+  {% for v in vendors %}
+  <div class="list-row justify-content-between">
+    <div class="d-flex align-items-center flex-grow-1 min-w-0">
+      <div class="row-icon" style="background:#e8f5e9">🏪</div>
+      <div class="row-main">
+        <div class="row-title">{{ v.name }}</div>
+        <div class="row-sub">
+          {{ v.vendor_type or 'Vendor' }}
+          {% if v.wholesale_relationship %} · <span class="text-success fw-semibold">Wholesale</span>{% endif %}
+          {% if v.location %} · {{ v.location }}{% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="d-flex gap-2 ms-2">
+      <a href="{{ url_for('vendor_edit', id=v.id) }}" class="btn btn-sm btn-outline-secondary rounded-3">
+        <i class="bi bi-pencil"></i>
+      </a>
+      <form method="POST" action="{{ url_for('vendor_delete', id=v.id) }}"
+            onsubmit="return confirm('Delete {{ v.name }}?')">
+        <button type="submit" class="btn btn-sm btn-outline-danger rounded-3">
+          <i class="bi bi-trash"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <i class="bi bi-shop"></i>
+  <p>No vendors yet.<br>Add your first supplier to get started.</p>
+</div>
+{% endif %}
+{% endblock %}

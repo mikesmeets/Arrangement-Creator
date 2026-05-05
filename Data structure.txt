@@ -1,0 +1,39 @@
+Arrangement:
+Name
+Date Created
+SKU
+Type (Arrangement, Bouquet, etc)
+Description
+Collection (one to many, syncs from shopify)
+Line items (one to many, consists of stems (flowers), hard goods, labor, etc). There's  price per, quantity, and total cost
+Cost (rolled up totals of all line items)
+Price
+Profit (Price less cost)
+Mark-up (multiple)
+Photo
+
+Line Item:
+Name
+Category (Flower, Hard Good, Labor)
+Type (generic type - Rose vs rose bought at Trader Joes, Vase instead of vase bought at supplier last week)
+Invoice (which invoice it came from)
+Quantity
+Price (per unit)
+Total
+
+Line items come from invoices with per unit coming from that
+Each line item has a generic version attached.
+
+Invoice:
+Vendor
+Date Purchased
+Line item - what was bought - price x quantity x total
+Total (rolled-up from invoice)
+
+Vendor:
+Name
+Type (Wholesale, Grocery, Retail)
+Location
+Phone Number
+Website
+Wholesale relationship (Boolean)

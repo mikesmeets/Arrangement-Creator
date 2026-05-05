@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% set back_url = url_for('invoices') %}
+{% block title %}{{ 'Edit Invoice' if invoice else 'New Invoice' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ 'Edit Invoice' if invoice else 'New Invoice' }}</h1>
+</div>
+
+<form method="POST">
+  <!-- Header fields -->
+  <div class="form-section">
+    <div class="form-section-title">Invoice Details</div>
+
+    <div class="mb-3">
+      <label class="form-label">Vendor *</label>
+      {% if vendors %}
+      <select name="vendor_id" class="form-select" required>
+        <option value="">— Select vendor —</option>
+        {% for v in vendors %}
+        <option value="{{ v.id }}" {% if invoice and invoice.vendor_id == v.id %}selected{% endif %}>
+          {{ v.name }}
+        </option>
+        {% endfor %}
+      </select>
+      {% else %}
+      <div class="alert alert-warning rounded-3 py-2" style="font-size:13px">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        No vendors yet. <a href="{{ url_for('vendor_new') }}">Add a vendor first.</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Date Purchased *</label>
+      <input type="date" name="date_purchased" class="form-control" required
+             value="{{ invoice.date_purchased.strftime('%Y-%m-%d') if invoice else '' }}">
+    </div>
+
+    <div class="mb-1">
+      <label class="form-label">Notes</label>
+      <textarea name="notes" class="form-control" rows="2"
+                placeholder="Order number, receipt #, etc.">{{ invoice.notes if invoice else '' }}</textarea>
+    </div>
+  </div>
+
+  <!-- Line items -->
+  <div class="form-section">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="form-section-title mb-0">Line Items</div>
+      <div class="fw-bold text-success" id="invoiceTotalDisplay">$0.00</div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-sm mb-0" style="font-size:13px">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Generic Type</th>
+            <th>Qty</th>
+            <th>Unit $</th>
+            <th class="text-end">Total</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="invoiceLineItems"></tbody>
+      </table>
+    </div>
+
+    <button type="button" class="btn btn-outline-success btn-sm mt-3 w-100 rounded-3"
+            onclick="addInvoiceRow()">
+      <i class="bi bi-plus-lg me-1"></i> Add Line Item
+    </button>
+  </div>
+
+  <div class="px-3 pb-4">
+    <button type="submit" class="btn btn-primary-green w-100">
+      <i class="bi bi-check-lg me-1"></i> {{ 'Save Changes' if invoice else 'Save Invoice' }}
+    </button>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const existingInvItems = {{ items_data | tojson }};
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (existingInvItems && existingInvItems.length) {
+    existingInvItems.forEach(function(item) { addInvoiceRow(item); });
+  } else {
+    addInvoiceRow(); // start with one blank row
+  }
+});
+</script>
+{% endblock %}

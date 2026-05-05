@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}TreBlooms — Home{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>TreBlooms 🌸</h1>
+  <p class="sub">Arrangement Pricing & Shopify Tool</p>
+</div>
+
+<!-- Stats -->
+<div class="px-3 pb-2">
+  <div class="row g-2">
+    <div class="col-6">
+      <div class="stat-card stat-green">
+        <div class="stat-num">{{ stats.arrangements }}</div>
+        <div class="stat-label">Arrangements</div>
+      </div>
+    </div>
+    <div class="col-6">
+      <div class="stat-card stat-orange">
+        <div class="stat-num">${{ '%.0f' % stats.total_value }}</div>
+        <div class="stat-label">Total Value</div>
+      </div>
+    </div>
+    <div class="col-6">
+      <div class="stat-card stat-teal">
+        <div class="stat-num">{{ stats.invoices }}</div>
+        <div class="stat-label">Invoices</div>
+      </div>
+    </div>
+    <div class="col-6">
+      <div class="stat-card stat-slate">
+        <div class="stat-num">{{ stats.vendors }}</div>
+        <div class="stat-label">Vendors</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Arrangements -->
+<div class="section-header">
+  <h2>Recent Arrangements</h2>
+  <a href="{{ url_for('arrangements') }}" class="btn btn-sm btn-link text-success p-0">See all</a>
+</div>
+
+{% if recent_arrangements %}
+<div class="px-3">
+  <div class="arr-grid">
+    {% for arr in recent_arrangements %}
+    <a href="{{ url_for('arrangement_detail', id=arr.id) }}" class="card arr-card text-decoration-none">
+      <div class="photo-wrap">
+        {% if arr.photo_path %}
+        <img src="{{ url_for('static', filename=arr.photo_path) }}" alt="{{ arr.name }}">
+        {% else %}
+        <span class="photo-placeholder">🌷</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <div class="arr-name text-dark mb-1">{{ arr.name }}</div>
+        {% if arr.arrangement_type %}
+        <div class="detail-badge mb-1" style="font-size:11px">{{ arr.arrangement_type }}</div>
+        {% endif %}
+        <div class="d-flex justify-content-between align-items-center mt-1">
+          <div class="arr-price">${{ '%.2f' % arr.price }}</div>
+          <div class="arr-profit {% if arr.profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {% if arr.profit >= 0 %}+{% endif %}${{ '%.2f' % arr.profit }}
+          </div>
+        </div>
+        <div class="text-muted" style="font-size:11px">{{ arr.markup | round(2) }}x markup</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="empty-state">
+  <i class="bi bi-flower1"></i>
+  <p>No arrangements yet.<br>Tap + to create your first one.</p>
+</div>
+{% endif %}
+
+<!-- Recent Invoices -->
+<div class="section-header mt-2">
+  <h2>Recent Invoices</h2>
+  <a href="{{ url_for('invoices') }}" class="btn btn-sm btn-link text-success p-0">See all</a>
+</div>
+
+<div class="mx-3 card card-sm overflow-hidden mb-4">
+  {% if recent_invoices %}
+  {% for inv in recent_invoices %}
+  <a href="{{ url_for('invoice_detail', id=inv.id) }}" class="list-row">
+    <div class="row-icon bg-light">🧾</div>
+    <div class="row-main">
+      <div class="row-title">{{ inv.vendor.name }}</div>
+      <div class="row-sub">{{ inv.date_purchased.strftime('%b %d, %Y') }} · {{ inv.items | length }} items</div>
+    </div>
+    <div class="row-right">
+      <div class="row-amount">${{ '%.2f' % inv.total }}</div>
+    </div>
+  </a>
+  {% endfor %}
+  {% else %}
+  <div class="p-4 text-center text-muted">No invoices yet.</div>
+  {% endif %}
+</div>
+
+<a href="{{ url_for('arrangement_new') }}" class="fab" title="New Arrangement">
+  <i class="bi bi-plus-lg"></i>
+</a>
+{% endblock %}
