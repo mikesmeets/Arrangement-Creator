@@ -104,6 +104,7 @@ class Invoice(db.Model):
     vendor_id = db.Column(db.Integer, db.ForeignKey('vendor.id'), nullable=False)
     date_purchased = db.Column(db.Date, nullable=False)
     notes = db.Column(db.Text)
+    photo_path = db.Column(db.String(500))
     items = db.relationship('InvoiceItem', backref='invoice', lazy=True, cascade='all, delete-orphan')
 
     @property

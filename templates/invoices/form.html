@@ -7,7 +7,7 @@
   <h1>{{ 'Edit Invoice' if invoice else 'New Invoice' }}</h1>
 </div>
 
-<form method="POST">
+<form method="POST" enctype="multipart/form-data">
   <div class="form-section">
     <div class="form-section-title">Invoice Details</div>
 
@@ -40,6 +40,32 @@
       <label class="form-label">Notes</label>
       <textarea name="notes" class="form-control" rows="2"
                 placeholder="Order number, receipt #, etc.">{{ invoice.notes if invoice else '' }}</textarea>
+    </div>
+  </div>
+
+  <!-- Photo -->
+  <div class="form-section">
+    <div class="form-section-title">Receipt / Photo</div>
+    {% if invoice and invoice.photo_path %}
+    <img src="{{ url_for('static', filename=invoice.photo_path) }}"
+         class="rounded-3 mb-3 w-100" style="max-height:220px;object-fit:cover">
+    <p class="text-muted mb-2" style="font-size:12px">Upload a new photo to replace the current one</p>
+    {% endif %}
+    <input type="file" id="photoInput" name="photo" accept="image/*" class="d-none"
+           onchange="showInvPhotoPreview(this)">
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-outline-secondary flex-fill rounded-3"
+              onclick="triggerInvPhoto(true)">
+        <i class="bi bi-camera me-1"></i> Camera
+      </button>
+      <button type="button" class="btn btn-outline-secondary flex-fill rounded-3"
+              onclick="triggerInvPhoto(false)">
+        <i class="bi bi-image me-1"></i> Library
+      </button>
+    </div>
+    <div id="photoPreview" class="mt-2" style="display:none">
+      <img id="photoPreviewImg" class="rounded-3 w-100" style="max-height:200px;object-fit:cover">
+      <p class="text-muted mt-1 mb-0" style="font-size:12px" id="photoPreviewName"></p>
     </div>
   </div>
 
@@ -89,5 +115,26 @@ document.addEventListener('DOMContentLoaded', function () {
     addInvoiceRow();
   }
 });
+
+function triggerInvPhoto(useCamera) {
+  const inp = document.getElementById('photoInput');
+  if (useCamera) {
+    inp.setAttribute('capture', 'environment');
+  } else {
+    inp.removeAttribute('capture');
+  }
+  inp.click();
+}
+
+function showInvPhotoPreview(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const preview = document.getElementById('photoPreview');
+  const img     = document.getElementById('photoPreviewImg');
+  const name    = document.getElementById('photoPreviewName');
+  img.src = URL.createObjectURL(file);
+  name.textContent = file.name;
+  preview.style.display = '';
+}
 </script>
 {% endblock %}

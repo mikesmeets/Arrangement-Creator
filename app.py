@@ -30,6 +30,7 @@ with app.app_context():
     for table, col, col_def in [
         ('invoice_item',     'generic_item_id', 'INTEGER REFERENCES generic_item(id)'),
         ('arrangement_item', 'generic_item_id', 'INTEGER REFERENCES generic_item(id)'),
+        ('invoice',          'photo_path',       'VARCHAR(500)'),
     ]:
         existing = [c['name'] for c in insp.get_columns(table)]
         if col not in existing:
@@ -215,6 +216,17 @@ def _save_invoice_items(invoice_id):
         db.session.add(item)
 
 
+def _handle_invoice_photo(invoice):
+    if 'photo' not in request.files:
+        return
+    file = request.files['photo']
+    if file and file.filename and allowed_file(file.filename):
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        filename = secure_filename(f"inv_{datetime.now().strftime('%Y%m%d%H%M%S')}_{invoice.id}.{ext}")
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        invoice.photo_path = f'uploads/{filename}'
+
+
 @app.route('/invoices/new', methods=['GET', 'POST'])
 def invoice_new():
     all_vendors = Vendor.query.order_by(Vendor.name).all()
@@ -226,6 +238,7 @@ def invoice_new():
         )
         db.session.add(invoice)
         db.session.flush()
+        _handle_invoice_photo(invoice)
         _save_invoice_items(invoice.id)
         db.session.commit()
         flash('Invoice saved!', 'success')
@@ -247,6 +260,7 @@ def invoice_edit(id):
         invoice.vendor_id = int(request.form['vendor_id'])
         invoice.date_purchased = datetime.strptime(request.form['date_purchased'], '%Y-%m-%d').date()
         invoice.notes = request.form.get('notes', '')
+        _handle_invoice_photo(invoice)
         InvoiceItem.query.filter_by(invoice_id=invoice.id).delete()
         _save_invoice_items(invoice.id)
         db.session.commit()
